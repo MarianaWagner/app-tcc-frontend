@@ -86,6 +86,21 @@ const coffeeTheme = {
     shadow: "#000000",
   };
   
+  const medicalTheme = {
+    primary: "#5BA8D8",        // Light blue
+    primaryDark: "#2C5F7D",    // Dark blue for text
+    background: "#F8FBFE",     // Very light blue/white background
+    text: "#2C5F7D",           // Dark blue text
+    border: "#D6E9F5",         // Light blue border
+    white: "#FFFFFF",
+    textLight: "#A8C5D9",      // Light gray-blue
+    card: "#FFFFFF",
+    shadow: "#000000",
+    notificationRed: "#FF6B6B",
+    notificationYellow: "#FFD93D",
+    subtitle: "#B0BEC5",       // Light gray for subtitle
+  };
+
   export const THEMES = {
     coffee: coffeeTheme,
     forest: forestTheme,
@@ -95,6 +110,7 @@ const coffeeTheme = {
     mint: mintTheme,
     midnight: midnightTheme,
     roseGold: roseGoldTheme,
+    medical: medicalTheme,
   };
   
-  export const COLORS = THEMES.purple;
+  export const COLORS = THEMES.medical;
