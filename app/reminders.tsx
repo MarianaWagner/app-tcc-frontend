@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -11,22 +11,22 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { TermGuard } from '../components/TermGuard';
 import { COLORS } from '../constants/colors';
 import { apiClient, Reminder } from '../services/api';
+import { notificationService } from '../services/notifications';
+import { formatDateTimeDDMMYYYY, formatRelativeDate } from '../utils/dateFormatter';
 
-export default function Reminders() {
+function RemindersContent() {
   const router = useRouter();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showUpcomingOnly, setShowUpcomingOnly] = useState(false);
 
-  useEffect(() => {
-    loadReminders();
-  }, [showUpcomingOnly]);
-
-  const loadReminders = async () => {
+  const loadReminders = async (showLoading = true) => {
     try {
+      if (showLoading) setIsLoading(true);
       let response;
       if (showUpcomingOnly) {
         response = await apiClient.getUpcomingReminders(30);
@@ -34,16 +34,41 @@ export default function Reminders() {
         response = await apiClient.getReminders({ limit: 50 });
       }
       
+      console.log('Reminders API Response:', response);
+      
       if (response.success) {
-        setReminders(response.data);
+        // Garantir que data é um array
+        const remindersData = Array.isArray(response.data) ? response.data : (response.data?.data || response.data?.reminders || []);
+        console.log('Reminders loaded:', remindersData.length, 'reminders:', remindersData);
+        
+        if (remindersData.length === 0) {
+          console.warn('No reminders found in response:', response);
+        }
+        
+        setReminders(remindersData);
+      } else {
+        console.log('Reminders API returned success=false:', response.message);
+        setReminders([]); // Garantir que está vazio se não teve sucesso
       }
     } catch (error) {
       console.error('Error loading reminders:', error);
       Alert.alert('Erro', 'Não foi possível carregar os lembretes.');
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadReminders();
+  }, [showUpcomingOnly]);
+
+  // Recarrega lembretes quando a tela recebe foco
+  useFocusEffect(
+    useCallback(() => {
+      // Recarrega os dados quando a tela recebe foco, sem mostrar loading
+      loadReminders(false);
+    }, [showUpcomingOnly])
+  );
 
   const onRefresh = async () => {
     setIsRefreshing(true);
@@ -62,12 +87,17 @@ export default function Reminders() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // TODO: Implement delete reminder endpoint
+              // Cancelar notificações antes de deletar
+              await notificationService.cancelReminderNotifications(reminderId);
+              
+              await apiClient.deleteReminder(reminderId);
               Alert.alert('Sucesso', 'Lembrete excluído com sucesso.');
-              // setReminders(reminders.filter(reminder => reminder.id !== reminderId));
-            } catch (error) {
+              // Recarrega os lembretes após deletar
+              await loadReminders(false);
+            } catch (error: any) {
               console.error('Error deleting reminder:', error);
-              Alert.alert('Erro', 'Não foi possível excluir o lembrete.');
+              const errorMessage = error?.message || 'Não foi possível excluir o lembrete.';
+              Alert.alert('Erro', errorMessage);
             }
           },
         },
@@ -76,31 +106,11 @@ export default function Reminders() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = date.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) {
-      return `Há ${Math.abs(diffDays)} dias`;
-    } else if (diffDays === 0) {
-      return 'Hoje';
-    } else if (diffDays === 1) {
-      return 'Amanhã';
-    } else {
-      return `Em ${diffDays} dias`;
-    }
+    return formatRelativeDate(dateString);
   };
 
   const formatFullDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatDateTimeDDMMYYYY(dateString);
   };
 
   const isOverdue = (dateString: string) => {
@@ -121,6 +131,10 @@ export default function Reminders() {
       return COLORS.notificationRed;
     }
     return COLORS.primary;
+  };
+
+  const handleEditReminder = (reminderId: string) => {
+    router.push(`/edit-reminder/${reminderId}`);
   };
 
   const renderReminderItem = ({ item }: { item: Reminder }) => (
@@ -146,13 +160,47 @@ export default function Reminders() {
         ]}>
           {formatDate(item.reminderDate)}
         </Text>
+        
+        {/* Fasting Information */}
+        {item.requiresFasting && (
+          <View style={styles.fastingContainer}>
+            <View style={styles.fastingBadge}>
+              <Ionicons name="water" size={14} color={COLORS.primary} />
+              <Text style={styles.fastingText}>
+                Jejum: {item.fastingDuration || 0}h
+              </Text>
+            </View>
+            {item.fastingAlertTime && (
+              <Text style={styles.fastingAlertText}>
+                Aviso: {formatFullDate(item.fastingAlertTime)}
+              </Text>
+            )}
+          </View>
+        )}
+        
+        {/* Notes */}
+        {item.notes && (
+          <View style={styles.notesContainer}>
+            <Text style={styles.notesText} numberOfLines={2}>
+              {item.notes}
+            </Text>
+          </View>
+        )}
       </View>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDeleteReminder(item.id, item.title)}
-      >
-        <Ionicons name="trash-outline" size={20} color={COLORS.notificationRed} />
-      </TouchableOpacity>
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => handleEditReminder(item.id)}
+        >
+          <Ionicons name="create-outline" size={20} color={COLORS.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => handleDeleteReminder(item.id, item.title)}
+        >
+          <Ionicons name="trash-outline" size={20} color={COLORS.notificationRed} />
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 
@@ -170,7 +218,7 @@ export default function Reminders() {
       </Text>
       <TouchableOpacity
         style={styles.addFirstButton}
-        onPress={() => Alert.alert('Em breve', 'Funcionalidade de criar lembretes será implementada em breve.')}
+        onPress={() => router.push('/add-reminder')}
       >
         <Ionicons name="add" size={20} color={COLORS.white} />
         <Text style={styles.addFirstButtonText}>Criar Lembrete</Text>
@@ -199,14 +247,10 @@ export default function Reminders() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lembretes</Text>
         <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setShowUpcomingOnly(!showUpcomingOnly)}
+          style={styles.addButton}
+          onPress={() => router.push('/add-reminder')}
         >
-          <Ionicons 
-            name={showUpcomingOnly ? "filter" : "filter-outline"} 
-            size={24} 
-            color={showUpcomingOnly ? COLORS.white : COLORS.primary} 
-          />
+          <Ionicons name="add" size={24} color={COLORS.white} />
         </TouchableOpacity>
       </View>
 
@@ -246,7 +290,7 @@ export default function Reminders() {
       <FlatList
         data={reminders}
         renderItem={renderReminderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => item.id || `reminder-${index}`}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -298,7 +342,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.primaryDark,
   },
-  filterButton: {
+  addButton: {
     backgroundColor: COLORS.primary,
     width: 40,
     height: 40,
@@ -378,9 +422,53 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  fastingContainer: {
+    marginTop: 8,
+  },
+  fastingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  fastingText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginLeft: 4,
+  },
+  fastingAlertText: {
+    fontSize: 12,
+    color: COLORS.subtitle,
+    marginTop: 4,
+  },
+  notesContainer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  notesText: {
+    fontSize: 13,
+    color: COLORS.text,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  editButton: {
+    padding: 8,
+    marginRight: 4,
+  },
   deleteButton: {
     padding: 8,
-    marginLeft: 8,
   },
   emptyState: {
     alignItems: 'center',
@@ -415,3 +503,11 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
+
+export default function Reminders() {
+  return (
+    <TermGuard>
+      <RemindersContent />
+    </TermGuard>
+  );
+}

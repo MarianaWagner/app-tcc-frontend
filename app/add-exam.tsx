@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { TermGuard } from '../components/TermGuard';
 import { COLORS } from '../constants/colors';
 import { apiClient } from '../services/api';
 
@@ -24,7 +25,7 @@ interface UploadedFile {
   size: number;
 }
 
-export default function AddExam() {
+function AddExamContent() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [examDate, setExamDate] = useState('');
@@ -88,6 +89,11 @@ export default function AddExam() {
       return;
     }
 
+    if (!examDate || examDate.length !== 10) {
+      Alert.alert('Erro', 'Por favor, preencha a data do exame no formato DD/MM/AAAA.');
+      return;
+    }
+
     try {
       setIsLoading(true);
 
@@ -101,7 +107,9 @@ export default function AddExam() {
         if (formattedDate) formData.append('examDate', formattedDate);
         if (notes) formData.append('notes', notes);
         if (tags) {
-          const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+          const tagsArray = tags.split(',')
+            .map(tag => tag.trim().toUpperCase())
+            .filter(tag => tag);
           // Envia cada tag individualmente para o backend
           tagsArray.forEach((tag, index) => {
             formData.append(`tags[${index}]`, tag);
@@ -117,25 +125,53 @@ export default function AddExam() {
           } as any);
         });
 
-        const response = await apiClient.uploadExamWithFiles(formData);
-        if (response.success) {
-          Alert.alert('Sucesso', 'Exame criado com sucesso!');
-          router.back();
-        }
+          const response = await apiClient.uploadExamWithFiles(formData);
+          console.log('Create exam response:', response);
+          if (response.success) {
+            Alert.alert(
+              'Sucesso', 
+              'Exame criado com sucesso!',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    setTimeout(() => {
+                      router.back();
+                    }, 500);
+                  }
+                }
+              ]
+            );
+          }
       } else {
         // Create exam without files
         const examData: any = { name };
         if (formattedDate) examData.examDate = formattedDate;
         if (notes) examData.notes = notes;
         if (tags) {
-          examData.tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+          examData.tags = tags.split(',')
+          .map(tag => tag.trim().toUpperCase())
+          .filter(tag => tag);
         }
 
-        const response = await apiClient.createExam(examData);
-        if (response.success) {
-          Alert.alert('Sucesso', 'Exame criado com sucesso!');
-          router.back();
-        }
+          const response = await apiClient.createExam(examData);
+          console.log('Create exam response:', response);
+          if (response.success) {
+            Alert.alert(
+              'Sucesso', 
+              'Exame criado com sucesso!',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    setTimeout(() => {
+                      router.back();
+                    }, 500);
+                  }
+                }
+              ]
+            );
+          }
       }
     } catch (error) {
       console.error('Error creating exam:', error);
@@ -236,7 +272,7 @@ export default function AddExam() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Data do Exame</Text>
+            <Text style={styles.label}>Data do Exame *</Text>
             <TextInput
               style={styles.input}
               value={examDate}
@@ -491,3 +527,11 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
 });
+
+export default function AddExam() {
+  return (
+    <TermGuard>
+      <AddExamContent />
+    </TermGuard>
+  );
+}

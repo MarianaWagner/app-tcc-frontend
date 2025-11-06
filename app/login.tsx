@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
@@ -22,7 +23,16 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // Redireciona baseado no status do termo quando autenticado
+  useEffect(() => {
+    if (isAuthenticated) {
+      // O index.tsx vai tratar o redirecionamento baseado no hasAcceptedTerm
+      router.replace('/');
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -40,11 +50,19 @@ export default function Login() {
       
       if (isLogin) {
         await login(email, password);
+        // O index.tsx vai redirecionar baseado no hasAcceptedTerm
+        // Não redirecionar aqui, deixar o index.tsx tratar
+        router.replace('/');
       } else {
         await register(name, email, password);
+        // Novo usuário precisa aceitar o termo - redirecionar para term-acceptance
+        router.replace('/term-acceptance');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
+      
+      // Log detalhado do erro para debug
+      console.error('Login/Register error:', error);
       
       // Mensagens mais amigáveis
       let friendlyMessage = errorMessage;
@@ -54,8 +72,10 @@ export default function Login() {
         friendlyMessage = 'Este e-mail já está em uso. Tente fazer login ou use outro e-mail.';
       } else if (errorMessage.includes('Invalid email or password')) {
         friendlyMessage = 'E-mail ou senha inválidos. Verifique suas credenciais.';
-      } else if (errorMessage.includes('Network request failed')) {
+      } else if (errorMessage.includes('Erro de conexão') || errorMessage.includes('Network request failed') || errorMessage.includes('Failed to fetch')) {
         friendlyMessage = 'Erro de conexão. Verifique sua internet e se o servidor está rodando.';
+      } else if (errorMessage.includes('conectar ao servidor')) {
+        friendlyMessage = errorMessage; // Manter mensagem de erro de conexão detalhada
       }
       
       Alert.alert('Erro', friendlyMessage);

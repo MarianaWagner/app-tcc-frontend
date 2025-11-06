@@ -1,28 +1,37 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+import { TermGuard } from '../components/TermGuard';
 import { COLORS } from '../constants/colors';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDateDDMMYYYY } from '../utils/dateFormatter';
 
-export default function Profile() {
+function ProfileContent() {
   const router = useRouter();
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, isLoading, isAuthenticated } = useAuth();
   const [showEditModal, setShowEditModal] = useState(false);
   const [editName, setEditName] = useState(user?.name || '');
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [isEditing, setIsEditing] = useState(false);
+
+  // Redireciona para login se não estiver autenticado
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const handleEditProfile = () => {
     setEditName(user?.name || '');
@@ -70,6 +79,8 @@ export default function Profile() {
           onPress: async () => {
             try {
               await logout();
+              // Redireciona para login após logout
+              router.replace('/login');
             } catch (error) {
               console.error('Logout error:', error);
             }
@@ -80,12 +91,7 @@ export default function Profile() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
+    return formatDateDDMMYYYY(dateString);
   };
 
   const getInitials = (name: string) => {
@@ -443,3 +449,11 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
 });
+
+export default function Profile() {
+  return (
+    <TermGuard>
+      <ProfileContent />
+    </TermGuard>
+  );
+}

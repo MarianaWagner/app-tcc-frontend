@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { apiClient, User } from '../services/api';
 
 interface AuthContextType {
@@ -7,10 +7,12 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  hasAcceptedTerm: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<void>;
+  checkTermStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAcceptedTerm, setHasAcceptedTerm] = useState(false);
 
   const isAuthenticated = !!user && !!token;
 
@@ -41,7 +44,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         try {
           const response = await apiClient.getMe();
           if (response.success) {
-            setUser(response.data);
+            const userData = response.data;
+            setUser(userData);
+            // Atualizar status do termo baseado nos dados do usuário
+            setHasAcceptedTerm(userData.hasAcceptedTerm || false);
           } else {
             // Token is invalid, clear storage
             await clearAuth();
@@ -68,7 +74,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
+      console.log('Attempting login for:', email);
       const response = await apiClient.login({ email, password });
+      console.log('Login response:', response);
       
       if (response.success) {
         const { user: userData, token: authToken } = response.data;
@@ -76,12 +84,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await AsyncStorage.setItem('auth_token', authToken);
         setUser(userData);
         setToken(authToken);
+        setHasAcceptedTerm(userData.hasAcceptedTerm || false);
         apiClient.setToken(authToken);
+        console.log('Login successful, user:', userData.email);
       } else {
-        throw new Error(response.message || 'Login failed');
+        const errorMsg = response.message || 'Login failed';
+        console.error('Login failed:', errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error in AuthContext:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -99,6 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await AsyncStorage.setItem('auth_token', authToken);
         setUser(userData);
         setToken(authToken);
+        setHasAcceptedTerm(userData.hasAcceptedTerm || false);
         apiClient.setToken(authToken);
       } else {
         throw new Error(response.message || 'Registration failed');
@@ -140,15 +153,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const checkTermStatus = async () => {
+    if (!token) return;
+    
+    try {
+      // Buscar dados atualizados do usuário (inclui status do termo)
+      const userResponse = await apiClient.getMe();
+      if (userResponse.success) {
+        const userData = userResponse.data;
+        setUser(userData);
+        setHasAcceptedTerm(userData.hasAcceptedTerm || false);
+      } else {
+        // Se falhar, tentar verificar status diretamente
+        const response = await apiClient.checkTermStatus();
+        if (response.success) {
+          const hasAccepted = response.data.hasAccepted;
+          setHasAcceptedTerm(hasAccepted);
+          
+          // Atualizar user também para manter sincronizado
+          if (user) {
+            setUser({
+              ...user,
+              hasAcceptedTerm: hasAccepted,
+              termAccepted: response.data.termAccepted,
+              termVersion: response.data.termVersion,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Check term status failed:', error);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
     isLoading,
     isAuthenticated,
+    hasAcceptedTerm,
     login,
     register,
     logout,
     refreshAuth,
+    checkTermStatus,
   };
 
   return (

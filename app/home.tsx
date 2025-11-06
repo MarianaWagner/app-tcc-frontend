@@ -3,12 +3,14 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { homeStyles } from "../assets/styles/home.styles";
+import { TermGuard } from "../components/TermGuard";
 import { COLORS } from "../constants/colors";
 import { useAuth } from "../contexts/AuthContext";
 import { apiClient, Exam, Reminder } from "../services/api";
+import { formatDateDDMMYYYY } from "../utils/dateFormatter";
 
-export default function Home() {
-  const { user, logout } = useAuth();
+function HomeContent() {
+  const { user, logout, isAuthenticated } = useAuth();
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -43,22 +45,40 @@ export default function Home() {
   const loadRecentExams = async () => {
     try {
       const response = await apiClient.getExams({ limit: 5 });
+      console.log('Home - Exams API Response:', response);
+      
       if (response.success) {
-        setExams(response.data);
+        // Garantir que data é um array
+        const examsData = Array.isArray(response.data) ? response.data : (response.data?.data || response.data?.exams || []);
+        console.log('Home - Exams loaded:', examsData.length);
+        setExams(examsData);
+      } else {
+        console.log('Home - Exams API returned success=false:', response.message);
+        setExams([]);
       }
     } catch (error) {
       console.error('Error loading exams:', error);
+      setExams([]);
     }
   };
 
   const loadUpcomingReminders = async () => {
     try {
       const response = await apiClient.getUpcomingReminders(7);
+      console.log('Home - Reminders API Response:', response);
+      
       if (response.success) {
-        setReminders(response.data);
+        // Garantir que data é um array
+        const remindersData = Array.isArray(response.data) ? response.data : (response.data?.data || response.data?.reminders || []);
+        console.log('Home - Reminders loaded:', remindersData.length);
+        setReminders(remindersData);
+      } else {
+        console.log('Home - Reminders API returned success=false:', response.message);
+        setReminders([]);
       }
     } catch (error) {
       console.error('Error loading reminders:', error);
+      setReminders([]);
     }
   };
 
@@ -71,17 +91,22 @@ export default function Home() {
   const handleLogout = async () => {
     try {
       await logout();
+      // Redireciona para login após logout
+      router.replace('/login');
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
 
+  // Redireciona para login se não estiver autenticado
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, isLoading]);
+
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-    });
+    return formatDateDDMMYYYY(dateString);
   };
 
   const getInitials = (name: string) => {
@@ -261,6 +286,14 @@ export default function Home() {
         </TouchableOpacity>
       </View>
     </View>
+  );
+}
+
+export default function Home() {
+  return (
+    <TermGuard>
+      <HomeContent />
+    </TermGuard>
   );
 }
 
