@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://192.168.68.110:5001/api';
+const API_BASE_URL = 'http://192.168.1.8:5001/api';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -60,6 +60,47 @@ export interface Reminder {
   updatedAt: string;
 }
 
+export type PrescriptionStatus = 'em_uso' | 'concluida' | 'suspensa';
+
+export interface PrescriptionItem {
+  id?: string;
+  name: string;
+  dosage?: string | null;
+  route?: string | null;
+  frequency?: string | null;
+  duration?: string | null;
+  notes?: string | null;
+  createdAt?: string | null;
+}
+
+export interface PrescriptionAttachment {
+  path: string;
+  mimeType: string;
+  metadata?: {
+    originalName?: string;
+    size?: number;
+    mimetype?: string;
+  };
+}
+
+export interface Prescription {
+  id: string;
+  userId?: string;
+  examId?: string | null;
+  title: string;
+  issueDate: string;
+  posology: string;
+  status: PrescriptionStatus;
+  tags?: string[];
+  notes?: string | null;
+  professional?: string | null;
+  attachment: PrescriptionAttachment;
+  items: PrescriptionItem[];
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  deletedAt?: string | null;
+}
+
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
@@ -83,9 +124,15 @@ class ApiClient {
     const url = `${this.baseURL}${endpoint}`;
     
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
+
+    const isFormData =
+      typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+    if (!isFormData) {
+      headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+    }
 
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
@@ -343,6 +390,67 @@ class ApiClient {
     });
   }
 
+  // Prescriptions endpoints
+  async getPrescriptions(params?: {
+    page?: number;
+    limit?: number;
+    status?: PrescriptionStatus | string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    tags?: string[];
+    sortField?: 'issueDate' | 'title' | 'status' | 'createdAt';
+    sortOrder?: 'asc' | 'desc';
+  }) {
+    const queryParams = new URLSearchParams();
+
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+    if (params?.tags && params.tags.length > 0) {
+      queryParams.append('tags', JSON.stringify(params.tags));
+    }
+    if (params?.sortField) queryParams.append('sortField', params.sortField);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+
+    const query = queryParams.toString();
+    return this.request<{ data: Prescription[]; pagination: ApiResponse<unknown>['pagination'] }>(
+      `/prescriptions${query ? `?${query}` : ''}`
+    );
+  }
+
+  async getPrescription(id: string) {
+    return this.request<Prescription>(`/prescriptions/${id}`);
+  }
+
+  async createPrescription(formData: FormData) {
+    return this.request<Prescription>('/prescriptions', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  async updatePrescription(id: string, formData: FormData) {
+    return this.request<Prescription>(`/prescriptions/${id}`, {
+      method: 'PUT',
+      body: formData,
+    });
+  }
+
+  async deletePrescription(id: string, options?: { hard?: boolean }) {
+    const query = options?.hard ? '?hard=true' : '';
+    return this.request(`/prescriptions/${id}${query}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getPrescriptionDownloadUrl(id: string) {
+    return `${this.baseURL}/prescriptions/${id}/download`;
+  }
+
   // File upload
   async uploadExamWithFiles(formData: FormData) {
     const url = `${this.baseURL}/exams`;
@@ -414,7 +522,7 @@ class ApiClient {
 
   // Share Link endpoints (public - no auth token)
   async getShareByCode(code: string) {
-    const url = `http://192.168.68.110:5001/s/${code}`;
+    const url = `http://192.168.1.8:5001/s/${code}`;
     const response = await fetch(url);
     const data = await response.json();
     if (!response.ok) {
@@ -424,7 +532,7 @@ class ApiClient {
   }
 
   async requestShareAccess(code: string, email: string) {
-    const url = `http://192.168.68.110:5001/s/${code}/request-access`;
+    const url = `http://192.168.1.8:5001/s/${code}/request-access`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -438,7 +546,7 @@ class ApiClient {
   }
 
   async validateShareOTP(code: string, email: string, otp: string) {
-    const url = `http://192.168.68.110:5001/s/${code}/validate-otp`;
+    const url = `http://192.168.1.8:5001/s/${code}/validate-otp`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -452,7 +560,7 @@ class ApiClient {
   }
 
   async listShareFiles(code: string, accessToken: string) {
-    const url = `http://192.168.68.110:5001/s/${code}/files`;
+    const url = `http://192.168.1.8:5001/s/${code}/files`;
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -466,12 +574,12 @@ class ApiClient {
   }
 
   async downloadShareFile(code: string, mediaId: string, accessToken: string): Promise<string> {
-    const url = `http://192.168.68.110:5001/s/${code}/files/${mediaId}/download`;
+    const url = `http://192.168.1.8:5001/s/${code}/files/${mediaId}/download`;
     return url; // Retorna URL para download com token
   }
 
   async downloadAllShareFiles(code: string, accessToken: string): Promise<string> {
-    const url = `http://192.168.68.110:5001/s/${code}/download-all`;
+    const url = `http://192.168.1.8:5001/s/${code}/download-all`;
     return url; // Retorna URL para download ZIP com token
   }
 }

@@ -6,7 +6,7 @@ import { homeStyles } from "../assets/styles/home.styles";
 import { TermGuard } from "../components/TermGuard";
 import { COLORS } from "../constants/colors";
 import { useAuth } from "../contexts/AuthContext";
-import { apiClient, Exam, Reminder } from "../services/api";
+import { apiClient, Exam, Prescription, Reminder } from "../services/api";
 import { formatDateDDMMYYYY } from "../utils/dateFormatter";
 
 function HomeContent() {
@@ -14,6 +14,7 @@ function HomeContent() {
   const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -33,12 +34,30 @@ function HomeContent() {
       if (showLoading) setIsLoading(true);
       await Promise.all([
         loadRecentExams(),
+        loadRecentPrescriptions(),
         loadUpcomingReminders(),
       ]);
     } catch (error) {
       console.error('Error loading home data:', error);
     } finally {
       if (showLoading) setIsLoading(false);
+    }
+  };
+
+  const loadRecentPrescriptions = async () => {
+    try {
+      const response = await apiClient.getPrescriptions({ limit: 3, sortField: 'issueDate', sortOrder: 'desc' });
+      if (response.success) {
+        const data = Array.isArray(response.data)
+          ? response.data
+          : (response.data as any)?.data ?? [];
+        setPrescriptions(data as Prescription[]);
+      } else {
+        setPrescriptions([]);
+      }
+    } catch (error) {
+      console.error('Error loading prescriptions:', error);
+      setPrescriptions([]);
     }
   };
 
@@ -177,7 +196,7 @@ function HomeContent() {
           />
         }
       >
-        {/* Main access button */}
+        {/* Main access buttons */}
         <TouchableOpacity 
           style={homeStyles.mainButton}
           activeOpacity={0.8}
@@ -188,6 +207,57 @@ function HomeContent() {
             Acessar seus Exames Médicos
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={[homeStyles.mainButton, { marginTop: 16, backgroundColor: '#2E7D32' }]}
+          activeOpacity={0.8}
+          onPress={() => router.push('/prescriptions')}
+        >
+          <Ionicons name="medkit-outline" size={24} color={COLORS.white} style={{ marginRight: 8 }} />
+          <Text style={homeStyles.mainButtonText}>
+            Gerenciar Prescrições Médicas
+          </Text>
+        </TouchableOpacity>
+
+        {/* Recent Prescriptions Section */}
+        <View style={homeStyles.sectionContainer}>
+          <View style={homeStyles.sectionHeader}>
+            <Text style={homeStyles.sectionTitle}>Prescrições Recentes</Text>
+            <TouchableOpacity onPress={() => router.push('/prescriptions')}>
+              <Text style={homeStyles.seeAllText}>Ver todas</Text>
+            </TouchableOpacity>
+          </View>
+
+          {prescriptions.length > 0 ? (
+            prescriptions.map((prescription) => (
+              <TouchableOpacity
+                key={prescription.id}
+                style={homeStyles.prescriptionCard}
+                onPress={() => router.push(`/prescription-detail/${prescription.id}`)}
+              >
+                <View style={homeStyles.prescriptionIcon}>
+                  <Ionicons name="medkit" size={20} color={COLORS.white} />
+                </View>
+                <View style={homeStyles.prescriptionContent}>
+                  <Text style={homeStyles.prescriptionTitle}>{prescription.title}</Text>
+                  <Text style={homeStyles.prescriptionSubtitle}>
+                    {formatDate(prescription.issueDate)}
+                  </Text>
+                  <Text style={homeStyles.prescriptionStatus}>
+                    Status: {prescription.status === 'em_uso' ? 'Em uso' : prescription.status === 'concluida' ? 'Concluída' : 'Suspensa'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={homeStyles.emptyState}>
+              <Ionicons name="medkit-outline" size={48} color={COLORS.subtitle} />
+              <Text style={homeStyles.emptyStateText}>Nenhuma prescrição cadastrada</Text>
+              <Text style={homeStyles.emptyStateSubtext}>
+                Registre suas prescrições para acompanhar posologia e anexos
+              </Text>
+            </View>
+          )}
+        </View>
 
         {/* Recent Exams Section */}
         <View style={homeStyles.sectionContainer}>
@@ -284,6 +354,14 @@ function HomeContent() {
         >
           <Ionicons name="document-text-outline" size={28} color={COLORS.subtitle} />
           <Text style={homeStyles.navText}>Exames</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={homeStyles.navButton}
+          onPress={() => router.push('/prescriptions')}
+        >
+          <Ionicons name="medkit-outline" size={28} color={COLORS.subtitle} />
+          <Text style={homeStyles.navText}>Prescrições</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 

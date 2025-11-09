@@ -150,7 +150,7 @@ export default function ShareScreen() {
     if (!accessToken || !code) return;
 
     try {
-      const downloadUrl = `http://192.168.68.110:5001/s/${code}/files/${mediaId}/download`;
+      const downloadUrl = `http://192.168.1.8:5001/s/${code}/files/${mediaId}/download`;
       
       const response = await fetch(downloadUrl, {
         headers: {
@@ -173,7 +173,7 @@ export default function ShareScreen() {
     if (!accessToken || !code || !shareInfo?.downloadAllUrl) return;
 
     try {
-      const downloadUrl = `http://192.168.68.110:5001/s/${code}/download-all`;
+      const downloadUrl = `http://192.168.1.8:5001/s/${code}/download-all`;
       
       const response = await fetch(downloadUrl, {
         headers: {
