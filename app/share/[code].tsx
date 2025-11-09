@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -150,7 +150,7 @@ export default function ShareScreen() {
     if (!accessToken || !code) return;
 
     try {
-      const downloadUrl = `http://192.168.1.8:5001/s/${code}/files/${mediaId}/download`;
+      const downloadUrl = `http://192.168.68.110:5001/s/${code}/files/${mediaId}/download`;
       
       const response = await fetch(downloadUrl, {
         headers: {
@@ -173,7 +173,7 @@ export default function ShareScreen() {
     if (!accessToken || !code || !shareInfo?.downloadAllUrl) return;
 
     try {
-      const downloadUrl = `http://192.168.1.8:5001/s/${code}/download-all`;
+      const downloadUrl = `http://192.168.68.110:5001/s/${code}/download-all`;
       
       const response = await fetch(downloadUrl, {
         headers: {
@@ -254,6 +254,7 @@ export default function ShareScreen() {
 
   return (
     <ScrollView style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.content}>
         {shareInfo && shareInfo.exams.length > 0 && (
           <View style={styles.examsInfo}>

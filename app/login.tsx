@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -34,7 +34,17 @@ export default function Login() {
     }
   }, [isAuthenticated, router]);
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string): boolean => {
+    return password.length >= 6;
+  };
+
   const handleSubmit = async () => {
+    // Validações básicas
     if (!email || !password) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios.');
       return;
@@ -45,16 +55,33 @@ export default function Login() {
       return;
     }
 
+    // Validação de email
+    if (!validateEmail(email)) {
+      Alert.alert('Erro', 'Por favor, insira um e-mail válido.');
+      return;
+    }
+
+    // Validação de senha
+    if (!validatePassword(password)) {
+      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
     try {
       setIsLoading(true);
       
       if (isLogin) {
         await login(email, password);
+        // Aguardar um pouco para garantir que o estado foi atualizado
+        await new Promise(resolve => setTimeout(resolve, 100));
         // O index.tsx vai redirecionar baseado no hasAcceptedTerm
-        // Não redirecionar aqui, deixar o index.tsx tratar
         router.replace('/');
       } else {
-        await register(name, email, password);
+        console.log('Attempting to register user:', { name, email });
+        await register(name.trim(), email.trim().toLowerCase(), password);
+        console.log('Registration successful');
+        // Aguardar um pouco para garantir que o estado foi atualizado
+        await new Promise(resolve => setTimeout(resolve, 100));
         // Novo usuário precisa aceitar o termo - redirecionar para term-acceptance
         router.replace('/term-acceptance');
       }
@@ -63,19 +90,29 @@ export default function Login() {
       
       // Log detalhado do erro para debug
       console.error('Login/Register error:', error);
+      console.error('Error details:', {
+        message: errorMessage,
+        isLogin,
+        email,
+        hasName: !!name,
+      });
       
       // Mensagens mais amigáveis
       let friendlyMessage = errorMessage;
-      if (errorMessage.includes('Email already in use')) {
+      if (errorMessage.includes('Email already in use') || errorMessage.includes('already exists') || errorMessage.includes('already registered')) {
         friendlyMessage = 'Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.';
-      } else if (errorMessage.includes('already exists')) {
-        friendlyMessage = 'Este e-mail já está em uso. Tente fazer login ou use outro e-mail.';
+      } else if (errorMessage.includes('Invalid email') || errorMessage.includes('email format')) {
+        friendlyMessage = 'Por favor, insira um e-mail válido.';
+      } else if (errorMessage.includes('password') && errorMessage.includes('short')) {
+        friendlyMessage = 'A senha deve ter pelo menos 6 caracteres.';
       } else if (errorMessage.includes('Invalid email or password')) {
         friendlyMessage = 'E-mail ou senha inválidos. Verifique suas credenciais.';
       } else if (errorMessage.includes('Erro de conexão') || errorMessage.includes('Network request failed') || errorMessage.includes('Failed to fetch')) {
         friendlyMessage = 'Erro de conexão. Verifique sua internet e se o servidor está rodando.';
       } else if (errorMessage.includes('conectar ao servidor')) {
         friendlyMessage = errorMessage; // Manter mensagem de erro de conexão detalhada
+      } else if (!friendlyMessage || friendlyMessage === 'Ocorreu um erro inesperado.') {
+        friendlyMessage = 'Não foi possível criar a conta. Verifique os dados informados e tente novamente.';
       }
       
       Alert.alert('Erro', friendlyMessage);
@@ -89,6 +126,7 @@ export default function Login() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>

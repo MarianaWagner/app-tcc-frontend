@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { homeStyles } from "../assets/styles/home.styles";
 import { TermGuard } from "../components/TermGuard";
 import { COLORS } from "../constants/colors";
@@ -89,13 +89,30 @@ function HomeContent() {
   };
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      // Redireciona para login após logout
-      router.replace('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    Alert.alert(
+      'Confirmar logout',
+      'Tem certeza que deseja sair da sua conta?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+              // Aguardar um pouco para garantir que o estado foi atualizado
+              await new Promise(resolve => setTimeout(resolve, 100));
+              // Redireciona para login após logout
+              router.replace('/login');
+            } catch (error) {
+              console.error('Logout error:', error);
+              // Mesmo se houver erro, tentar redirecionar
+              router.replace('/login');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Redireciona para login se não estiver autenticado
@@ -292,6 +309,7 @@ function HomeContent() {
 export default function Home() {
   return (
     <TermGuard>
+      <Stack.Screen options={{ headerShown: false }} />
       <HomeContent />
     </TermGuard>
   );

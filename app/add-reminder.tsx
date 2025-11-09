@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -109,6 +109,28 @@ function AddReminderContent() {
       return `${yearISO}-${monthISO}-${dayISO}T${hoursISO}:${minutesISO}:00${offsetStr}`;
     }
     return null;
+  };
+
+  const showDateTimeInfo = () => {
+    Alert.alert(
+      'Como funcionam as Datas e Horas',
+      '• Data: Use o formato DD/MM/AAAA (ex: 25/12/2024)\n\n' +
+      '• Horário: Use o formato HH:MM em 24 horas (ex: 14:30). Se não informar, será usado 00:00\n\n' +
+      '• O sistema usa o fuso horário do seu dispositivo automaticamente\n\n' +
+      '• A notificação será enviada no horário exato que você configurou',
+      [{ text: 'Entendi', style: 'default' }]
+    );
+  };
+
+  const showNotificationInfo = () => {
+    Alert.alert(
+      'Como funcionam as Notificações',
+      '• Você receberá uma notificação no horário exato configurado no lembrete\n\n' +
+      '• Se o lembrete requer jejum, você também receberá um aviso no horário configurado para o aviso de jejum\n\n' +
+      '• As notificações aparecem mesmo com o app fechado\n\n' +
+      '• Certifique-se de permitir notificações nas configurações do dispositivo',
+      [{ text: 'Entendi', style: 'default' }]
+    );
   };
 
   const handleSubmit = async () => {
@@ -304,7 +326,12 @@ function AddReminderContent() {
 
           {/* Date */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Data do Lembrete *</Text>
+            <View style={styles.labelContainer}>
+              <Text style={styles.label}>Data do Lembrete *</Text>
+              <TouchableOpacity onPress={showDateTimeInfo} style={styles.infoIcon}>
+                <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
             <TextInput
               style={styles.input}
               value={reminderDate}
@@ -317,7 +344,12 @@ function AddReminderContent() {
 
           {/* Time */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Horário (opcional)</Text>
+            <View style={styles.labelContainer}>
+              <Text style={styles.label}>Horário (opcional)</Text>
+              <TouchableOpacity onPress={showNotificationInfo} style={styles.infoIcon}>
+                <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
             <TextInput
               style={styles.input}
               value={reminderTime}
@@ -514,11 +546,21 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: 24,
   },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.primaryDark,
-    marginBottom: 8,
+    flex: 1,
+  },
+  infoIcon: {
+    padding: 4,
+    marginLeft: 8,
   },
   input: {
     backgroundColor: COLORS.white,
@@ -593,6 +635,7 @@ const styles = StyleSheet.create({
 export default function AddReminder() {
   return (
     <TermGuard>
+      <Stack.Screen options={{ headerShown: false }} />
       <AddReminderContent />
     </TermGuard>
   );

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -34,6 +34,23 @@ function AddExamContent() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const isValidFileType = (mimeType: string, fileName: string): boolean => {
+    const lowerMimeType = mimeType.toLowerCase();
+    const lowerFileName = fileName.toLowerCase();
+    
+    // Aceitar apenas JPG, PNG e PDF
+    return (
+      lowerMimeType === 'image/jpeg' ||
+      lowerMimeType === 'image/jpg' ||
+      lowerMimeType === 'image/png' ||
+      lowerMimeType === 'application/pdf' ||
+      lowerFileName.endsWith('.jpg') ||
+      lowerFileName.endsWith('.jpeg') ||
+      lowerFileName.endsWith('.png') ||
+      lowerFileName.endsWith('.pdf')
+    );
+  };
+
   const handleSelectImages = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -43,13 +60,35 @@ function AddExamContent() {
       });
 
       if (!result.canceled) {
-        const newFiles = result.assets.map(asset => ({
-          uri: asset.uri,
-          name: asset.fileName || `image_${Date.now()}.jpg`,
-          type: asset.type || 'image/jpeg',
-          size: asset.fileSize || 0,
-        }));
-        setFiles(prev => [...prev, ...newFiles]);
+        const validFiles: UploadedFile[] = [];
+        const invalidFiles: string[] = [];
+
+        result.assets.forEach(asset => {
+          const fileName = asset.fileName || `image_${Date.now()}.jpg`;
+          const mimeType = asset.type || 'image/jpeg';
+          
+          if (isValidFileType(mimeType, fileName)) {
+            validFiles.push({
+              uri: asset.uri,
+              name: fileName,
+              type: mimeType,
+              size: asset.fileSize || 0,
+            });
+          } else {
+            invalidFiles.push(fileName);
+          }
+        });
+
+        if (invalidFiles.length > 0) {
+          Alert.alert(
+            'Arquivo não suportado',
+            `Os seguintes arquivos não são suportados: ${invalidFiles.join(', ')}\n\nApenas arquivos JPG, PNG e PDF são permitidos.`
+          );
+        }
+
+        if (validFiles.length > 0) {
+          setFiles(prev => [...prev, ...validFiles]);
+        }
       }
     } catch (error) {
       console.error('Error selecting images:', error);
@@ -60,18 +99,39 @@ function AddExamContent() {
   const handleSelectDocuments = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/*', 'video/*'],
+        type: ['application/pdf', 'image/jpeg', 'image/png'],
         multiple: true,
       });
 
       if (!result.canceled && result.assets) {
-        const newFiles = result.assets.map(asset => ({
-          uri: asset.uri,
-          name: asset.name,
-          type: asset.mimeType || 'application/octet-stream',
-          size: asset.size || 0,
-        }));
-        setFiles(prev => [...prev, ...newFiles]);
+        const validFiles: UploadedFile[] = [];
+        const invalidFiles: string[] = [];
+
+        result.assets.forEach(asset => {
+          const mimeType = asset.mimeType || 'application/octet-stream';
+          
+          if (isValidFileType(mimeType, asset.name)) {
+            validFiles.push({
+              uri: asset.uri,
+              name: asset.name,
+              type: mimeType,
+              size: asset.size || 0,
+            });
+          } else {
+            invalidFiles.push(asset.name);
+          }
+        });
+
+        if (invalidFiles.length > 0) {
+          Alert.alert(
+            'Arquivo não suportado',
+            `Os seguintes arquivos não são suportados: ${invalidFiles.join(', ')}\n\nApenas arquivos JPG, PNG e PDF são permitidos.`
+          );
+        }
+
+        if (validFiles.length > 0) {
+          setFiles(prev => [...prev, ...validFiles]);
+        }
       }
     } catch (error) {
       console.error('Error selecting documents:', error);
@@ -311,7 +371,7 @@ function AddExamContent() {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Anexar Arquivos</Text>
             <Text style={styles.fileHint}>
-              Máximo 10 arquivos, 50MB cada. Tipos: JPG, PNG, PDF, MP4
+              Máximo 10 arquivos, 50MB cada. Tipos: JPG, PNG e PDF
             </Text>
             
             <View style={styles.fileButtons}>
@@ -341,8 +401,7 @@ function AddExamContent() {
                       <Ionicons
                         name={
                           file.type.startsWith('image/') ? 'image' :
-                          file.type.startsWith('video/') ? 'videocam' :
-                          'document'
+                          'document-text'
                         }
                         size={16}
                         color={COLORS.primary}
@@ -531,6 +590,7 @@ const styles = StyleSheet.create({
 export default function AddExam() {
   return (
     <TermGuard>
+      <Stack.Screen options={{ headerShown: false }} />
       <AddExamContent />
     </TermGuard>
   );

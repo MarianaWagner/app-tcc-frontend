@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -63,10 +63,6 @@ function ProfileContent() {
     }
   };
 
-  const handleChangePassword = () => {
-    Alert.alert('Em breve', 'A funcionalidade de alteração de senha será implementada em breve.');
-  };
-
   const handleLogout = async () => {
     Alert.alert(
       'Confirmar logout',
@@ -79,10 +75,14 @@ function ProfileContent() {
           onPress: async () => {
             try {
               await logout();
+              // Aguardar um pouco para garantir que o estado foi atualizado
+              await new Promise(resolve => setTimeout(resolve, 100));
               // Redireciona para login após logout
               router.replace('/login');
             } catch (error) {
               console.error('Logout error:', error);
+              // Mesmo se houver erro, tentar redirecionar
+              router.replace('/login');
             }
           },
         },
@@ -109,27 +109,6 @@ function ProfileContent() {
       title: 'Editar Perfil',
       subtitle: 'Atualizar informações pessoais',
       onPress: handleEditProfile,
-      color: COLORS.primary,
-    },
-    {
-      icon: 'lock-closed-outline',
-      title: 'Alterar Senha',
-      subtitle: 'Modificar sua senha de acesso',
-      onPress: handleChangePassword,
-      color: COLORS.primary,
-    },
-    {
-      icon: 'share-outline',
-      title: 'Compartilhar Exames',
-      subtitle: 'Gerenciar compartilhamentos',
-      onPress: () => Alert.alert('Em breve', 'Funcionalidade será implementada em breve.'),
-      color: COLORS.primary,
-    },
-    {
-      icon: 'help-circle-outline',
-      title: 'Ajuda e Suporte',
-      subtitle: 'Central de ajuda e contato',
-      onPress: () => Alert.alert('Em breve', 'Funcionalidade será implementada em breve.'),
       color: COLORS.primary,
     },
     {
@@ -453,6 +432,7 @@ const styles = StyleSheet.create({
 export default function Profile() {
   return (
     <TermGuard>
+      <Stack.Screen options={{ headerShown: false }} />
       <ProfileContent />
     </TermGuard>
   );

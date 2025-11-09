@@ -1,17 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { TermGuard } from '../../components/TermGuard';
 import { COLORS } from '../../constants/colors';
@@ -370,6 +370,7 @@ const styles = StyleSheet.create({
 export default function EditExam() {
   return (
     <TermGuard>
+      <Stack.Screen options={{ headerShown: false }} />
       <EditExamContent />
     </TermGuard>
   );

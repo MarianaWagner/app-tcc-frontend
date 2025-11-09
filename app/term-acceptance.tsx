@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -136,6 +136,7 @@ export default function TermAcceptance() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <Ionicons name="document-text" size={48} color={COLORS.primary} />
         <Text style={styles.title}>Termo de Responsabilidade</Text>

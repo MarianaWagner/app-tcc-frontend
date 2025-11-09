@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://192.168.1.8:5001/api';
+const API_BASE_URL = 'http://192.168.68.110:5001/api';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -118,6 +118,13 @@ class ApiClient {
         throw new Error(errorMessage);
       }
 
+      // Verificar se a resposta indica sucesso mesmo com status 200
+      if (data && data.success === false) {
+        const errorMessage = data?.error || data?.message || 'Request failed';
+        console.error(`API Error [success=false]:`, errorMessage, 'URL:', url);
+        throw new Error(errorMessage);
+      }
+
       return data;
     } catch (error) {
       if (error instanceof Error) {
@@ -134,10 +141,18 @@ class ApiClient {
 
   // Auth endpoints
   async register(data: { name: string; email: string; password: string }) {
-    return this.request<{ user: User; token: string }>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    console.log('ApiClient: Register request data:', { name: data.name, email: data.email, hasPassword: !!data.password });
+    try {
+      const response = await this.request<{ user: User; token: string }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      console.log('ApiClient: Register response:', response);
+      return response;
+    } catch (error) {
+      console.error('ApiClient: Register error:', error);
+      throw error;
+    }
   }
 
   async login(data: { email: string; password: string }) {
@@ -399,7 +414,7 @@ class ApiClient {
 
   // Share Link endpoints (public - no auth token)
   async getShareByCode(code: string) {
-    const url = `http://192.168.1.8:5001/s/${code}`;
+    const url = `http://192.168.68.110:5001/s/${code}`;
     const response = await fetch(url);
     const data = await response.json();
     if (!response.ok) {
@@ -409,7 +424,7 @@ class ApiClient {
   }
 
   async requestShareAccess(code: string, email: string) {
-    const url = `http://192.168.1.8:5001/s/${code}/request-access`;
+    const url = `http://192.168.68.110:5001/s/${code}/request-access`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -423,7 +438,7 @@ class ApiClient {
   }
 
   async validateShareOTP(code: string, email: string, otp: string) {
-    const url = `http://192.168.1.8:5001/s/${code}/validate-otp`;
+    const url = `http://192.168.68.110:5001/s/${code}/validate-otp`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -437,7 +452,7 @@ class ApiClient {
   }
 
   async listShareFiles(code: string, accessToken: string) {
-    const url = `http://192.168.1.8:5001/s/${code}/files`;
+    const url = `http://192.168.68.110:5001/s/${code}/files`;
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -451,12 +466,12 @@ class ApiClient {
   }
 
   async downloadShareFile(code: string, mediaId: string, accessToken: string): Promise<string> {
-    const url = `http://192.168.1.8:5001/s/${code}/files/${mediaId}/download`;
+    const url = `http://192.168.68.110:5001/s/${code}/files/${mediaId}/download`;
     return url; // Retorna URL para download com token
   }
 
   async downloadAllShareFiles(code: string, accessToken: string): Promise<string> {
-    const url = `http://192.168.1.8:5001/s/${code}/download-all`;
+    const url = `http://192.168.68.110:5001/s/${code}/download-all`;
     return url; // Retorna URL para download ZIP com token
   }
 }

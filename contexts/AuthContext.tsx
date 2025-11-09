@@ -65,9 +65,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const clearAuth = async () => {
-    await AsyncStorage.removeItem('auth_token');
+    try {
+      await AsyncStorage.removeItem('auth_token');
+    } catch (error) {
+      console.error('Error clearing auth token from storage:', error);
+    }
     setUser(null);
     setToken(null);
+    setHasAcceptedTerm(false);
     apiClient.setToken(null);
   };
 
@@ -103,10 +108,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const register = async (name: string, email: string, password: string) => {
     try {
       setIsLoading(true);
-      const response = await apiClient.register({ name, email, password });
+      console.log('AuthContext: Attempting registration for:', email);
       
-      if (response.success) {
-        const { user: userData, token: authToken } = response.data;
+      const response = await apiClient.register({ name, email, password });
+      console.log('AuthContext: Registration response:', JSON.stringify(response, null, 2));
+      
+      // Verificar se a resposta tem a estrutura esperada
+      if (response && response.success !== false) {
+        // A resposta pode vir diretamente como { user, token } ou como { success: true, data: { user, token } }
+        let userData: User;
+        let authToken: string;
+        
+        if (response.data) {
+          // Formato: { success: true, data: { user, token } }
+          if (typeof response.data === 'object' && 'user' in response.data && 'token' in response.data) {
+            userData = (response.data as any).user;
+            authToken = (response.data as any).token;
+          } else {
+            // Pode ser que data seja o próprio User e token esteja em outro lugar
+            throw new Error('Formato de resposta inesperado da API');
+          }
+        } else if ('user' in response && 'token' in response) {
+          // Formato direto: { user, token }
+          userData = (response as any).user;
+          authToken = (response as any).token;
+        } else {
+          throw new Error('Formato de resposta inesperado da API');
+        }
+        
+        console.log('AuthContext: Registration successful, user:', userData.email);
         
         await AsyncStorage.setItem('auth_token', authToken);
         setUser(userData);
@@ -114,10 +144,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setHasAcceptedTerm(userData.hasAcceptedTerm || false);
         apiClient.setToken(authToken);
       } else {
-        throw new Error(response.message || 'Registration failed');
+        const errorMsg = response?.message || 'Registration failed';
+        console.error('AuthContext: Registration failed:', errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('AuthContext: Registration error:', error);
+      // Re-throw para que o componente possa tratar
       throw error;
     } finally {
       setIsLoading(false);
@@ -126,12 +159,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = async () => {
     try {
+      // Tentar fazer logout na API, mas não bloquear se falhar
       if (token) {
-        await apiClient.logout();
+        try {
+          await apiClient.logout();
+        } catch (error) {
+          // Se a API falhar, continuar com a limpeza local
+          console.warn('Logout API call failed, clearing local auth anyway:', error);
+        }
       }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Sempre limpar os dados locais, mesmo se a API falhar
       await clearAuth();
     }
   };

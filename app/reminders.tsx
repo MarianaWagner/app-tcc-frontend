@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -507,6 +507,7 @@ const styles = StyleSheet.create({
 export default function Reminders() {
   return (
     <TermGuard>
+      <Stack.Screen options={{ headerShown: false }} />
       <RemindersContent />
     </TermGuard>
   );

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -216,6 +216,19 @@ function ExamsContent() {
     loadExams();
   };
 
+  const showShareInfo = () => {
+    Alert.alert(
+      'Como funciona o Compartilhamento',
+      '• Selecione um ou mais exames e clique no botão de compartilhar\n\n' +
+      '• Informe o e-mail do destinatário e uma mensagem opcional\n\n' +
+      '• Um link único será gerado e enviado por e-mail ao destinatário\n\n' +
+      '• O link expira em 7 dias e pode ser usado apenas 1 vez por padrão\n\n' +
+      '• O destinatário poderá visualizar e baixar os arquivos dos exames compartilhados\n\n' +
+      '• Você pode revogar o compartilhamento a qualquer momento',
+      [{ text: 'Entendi', style: 'default' }]
+    );
+  };
+
   const renderExamItem = ({ item }: { item: Exam }) => {
     const isSelected = selectedExamIds.includes(item.id);
     
@@ -346,6 +359,12 @@ function ExamsContent() {
         <View style={styles.headerActions}>
           {!isSelectionMode ? (
             <>
+              <TouchableOpacity
+                style={styles.infoHeaderButton}
+                onPress={showShareInfo}
+              >
+                <Ionicons name="information-circle-outline" size={24} color={COLORS.primary} />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.shareHeaderButton}
                 onPress={() => setIsSelectionMode(true)}
@@ -536,6 +555,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+  },
+  infoHeaderButton: {
+    padding: 8,
   },
   shareHeaderButton: {
     padding: 8,
@@ -789,6 +811,7 @@ const styles = StyleSheet.create({
 export default function Exams() {
   return (
     <TermGuard>
+      <Stack.Screen options={{ headerShown: false }} />
       <ExamsContent />
     </TermGuard>
   );
