@@ -257,11 +257,11 @@ function PrescriptionsContent() {
 
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color={COLORS.subtitle} style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color={COLORS.primaryDark} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar por título ou profissional..."
-            placeholderTextColor={COLORS.subtitle}
+            placeholderTextColor={COLORS.primaryDark}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
@@ -445,10 +445,12 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: COLORS.primaryDark,
   },
   searchIcon: {
     marginRight: 8,
@@ -456,7 +458,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: COLORS.text,
+    color: COLORS.primaryDark,
     padding: 0,
   },
   clearButton: {

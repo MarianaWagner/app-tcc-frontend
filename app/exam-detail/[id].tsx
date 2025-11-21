@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Linking,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { TermGuard } from '../../components/TermGuard';
 import { COLORS } from '../../constants/colors';
@@ -204,12 +204,6 @@ function ExamDetailContent() {
           <Ionicons name="arrow-back" size={24} color={COLORS.primaryDark} />
         </TouchableOpacity>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerActionButton}
-            onPress={() => {}}
-          >
-            <Ionicons name="share-outline" size={24} color={COLORS.primary} />
-          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerActionButton}
             onPress={handleEdit}

@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://192.168.1.8:5001/api';
+export const BASE_URL = process.env.EXPO_BASE_URL || `http://192.168.1.8:5001`;
+export const API_BASE_URL = process.env.EXPO_API_BASE_URL || `${BASE_URL}/api`;
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -522,7 +523,7 @@ class ApiClient {
 
   // Share Link endpoints (public - no auth token)
   async getShareByCode(code: string) {
-    const url = `http://192.168.1.8:5001/s/${code}`;
+    const url = `${BASE_URL}/s/${code}`;
     const response = await fetch(url);
     const data = await response.json();
     if (!response.ok) {
@@ -532,7 +533,7 @@ class ApiClient {
   }
 
   async requestShareAccess(code: string, email: string) {
-    const url = `http://192.168.1.8:5001/s/${code}/request-access`;
+    const url = `${BASE_URL}/s/${code}/request-access`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -546,7 +547,7 @@ class ApiClient {
   }
 
   async validateShareOTP(code: string, email: string, otp: string) {
-    const url = `http://192.168.1.8:5001/s/${code}/validate-otp`;
+    const url = `${BASE_URL}/s/${code}/validate-otp`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -560,7 +561,7 @@ class ApiClient {
   }
 
   async listShareFiles(code: string, accessToken: string) {
-    const url = `http://192.168.1.8:5001/s/${code}/files`;
+    const url = `${BASE_URL}/s/${code}/files`;
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -574,12 +575,12 @@ class ApiClient {
   }
 
   async downloadShareFile(code: string, mediaId: string, accessToken: string): Promise<string> {
-    const url = `http://192.168.1.8:5001/s/${code}/files/${mediaId}/download`;
+    const url = `${BASE_URL}/s/${code}/files/${mediaId}/download`;
     return url; // Retorna URL para download com token
   }
 
   async downloadAllShareFiles(code: string, accessToken: string): Promise<string> {
-    const url = `http://192.168.1.8:5001/s/${code}/download-all`;
+    const url = `${BASE_URL}/s/${code}/download-all`;
     return url; // Retorna URL para download ZIP com token
   }
 }

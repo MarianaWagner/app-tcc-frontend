@@ -4,15 +4,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { TermGuard } from '../components/TermGuard';
 import { COLORS } from '../constants/colors';
@@ -143,6 +143,32 @@ function AddExamContent() {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleExamCreationSuccess = () => {
+    Alert.alert(
+      'Sucesso',
+      'Exame criado com sucesso! Deseja cadastrar um lembrete?',
+      [
+        {
+          text: 'Agora não',
+          style: 'cancel',
+          onPress: () => {
+            setTimeout(() => {
+              router.back();
+            }, 500);
+          },
+        },
+        {
+          text: 'Cadastrar lembrete',
+          onPress: () => {
+            setTimeout(() => {
+              router.push('/add-reminder');
+            }, 500);
+          },
+        },
+      ],
+    );
+  };
+
   const handleSubmit = async () => {
     if (!name.trim()) {
       Alert.alert('Erro', 'Por favor, preencha o nome do exame.');
@@ -188,20 +214,7 @@ function AddExamContent() {
           const response = await apiClient.uploadExamWithFiles(formData);
           console.log('Create exam response:', response);
           if (response.success) {
-            Alert.alert(
-              'Sucesso', 
-              'Exame criado com sucesso!',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    setTimeout(() => {
-                      router.back();
-                    }, 500);
-                  }
-                }
-              ]
-            );
+            handleExamCreationSuccess();
           }
       } else {
         // Create exam without files
@@ -217,20 +230,7 @@ function AddExamContent() {
           const response = await apiClient.createExam(examData);
           console.log('Create exam response:', response);
           if (response.success) {
-            Alert.alert(
-              'Sucesso', 
-              'Exame criado com sucesso!',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    setTimeout(() => {
-                      router.back();
-                    }, 500);
-                  }
-                }
-              ]
-            );
+            handleExamCreationSuccess();
           }
       }
     } catch (error) {

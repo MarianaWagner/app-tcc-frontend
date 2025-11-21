@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.apptccfrontend"
+      "bundleIdentifier": "com.anonymous.apptccfrontend",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +28,10 @@
         "RECEIVE_BOOT_COMPLETED",
         "RECEIVE_BOOT_COMPLETED"
       ],
-      "package": "com.anonymous.apptccfrontend"
+      "package": "com.anonymous.apptccfrontend",
+      "config": {
+        "usesCleartextTraffic": true
+      }
     },
     "web": {
       "output": "static",
@@ -57,6 +63,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "36ecd0d8-686a-449a-93bd-ae1c98b36283"
+      }
     }
   }
 }

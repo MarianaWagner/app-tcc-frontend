@@ -138,7 +138,11 @@ function RemindersContent() {
   };
 
   const renderReminderItem = ({ item }: { item: Reminder }) => (
-    <TouchableOpacity style={styles.reminderCard}>
+    <TouchableOpacity
+      style={styles.reminderCard}
+      activeOpacity={0.85}
+      onPress={() => handleEditReminder(item.id)}
+    >
       <View style={[
         styles.reminderIcon,
         { backgroundColor: getReminderColor(item.reminderDate) }

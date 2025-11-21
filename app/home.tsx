@@ -83,12 +83,14 @@ function HomeContent() {
 
   const loadUpcomingReminders = async () => {
     try {
-      const response = await apiClient.getUpcomingReminders(7);
+      const response = await apiClient.getReminders({ limit: 5, upcoming: true });
       console.log('Home - Reminders API Response:', response);
       
       if (response.success) {
         // Garantir que data é um array
-        const remindersData = Array.isArray(response.data) ? response.data : (response.data?.data || response.data?.reminders || []);
+        const remindersData = Array.isArray(response.data)
+          ? response.data
+          : (response.data?.data || response.data?.reminders || []);
         console.log('Home - Reminders loaded:', remindersData.length);
         setReminders(remindersData);
       } else {
@@ -143,6 +145,16 @@ function HomeContent() {
 
   const formatDate = (dateString: string) => {
     return formatDateDDMMYYYY(dateString);
+  };
+
+  const handleOpenExam = (examId: string) => {
+    if (!examId) return;
+    router.push(`/exam-detail/${examId}`);
+  };
+
+  const handleOpenReminder = (reminderId: string) => {
+    if (!reminderId) return;
+    router.push(`/edit-reminder/${reminderId}`);
   };
 
   const getInitials = (name: string) => {
@@ -270,7 +282,12 @@ function HomeContent() {
           
           {exams.length > 0 ? (
             exams.map((exam) => (
-              <View key={exam.id} style={homeStyles.examCard}>
+              <TouchableOpacity
+                key={exam.id}
+                style={homeStyles.examCard}
+                activeOpacity={0.8}
+                onPress={() => handleOpenExam(exam.id)}
+              >
                 <View style={homeStyles.examIcon}>
                   <Ionicons name="document-text" size={20} color={COLORS.primary} />
                 </View>
@@ -291,7 +308,7 @@ function HomeContent() {
                     </View>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           ) : (
             <View style={homeStyles.emptyState}>
@@ -315,7 +332,12 @@ function HomeContent() {
           
           {reminders.length > 0 ? (
             reminders.slice(0, 3).map((reminder) => (
-              <View key={reminder.id} style={homeStyles.notificationCard}>
+              <TouchableOpacity
+                key={reminder.id}
+                style={homeStyles.notificationCard}
+                activeOpacity={0.8}
+                onPress={() => handleOpenReminder(reminder.id)}
+              >
                 <View style={[homeStyles.notificationIcon, homeStyles.notificationIconRed]}>
                   <Ionicons name="alarm" size={24} color={COLORS.white} />
                 </View>
@@ -327,7 +349,7 @@ function HomeContent() {
                 <Text style={homeStyles.notificationDate}>
                   {formatDate(reminder.reminderDate)}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))
           ) : (
             <View style={homeStyles.emptyState}>
