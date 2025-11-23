@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,6 +24,7 @@ function ExamDetailContent() {
   const [examFiles, setExamFiles] = useState<ExamMedia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -83,8 +85,9 @@ function ExamDetailContent() {
       setIsLoadingFiles(true);
       const response = await apiClient.getExamMedia(id);
       if (response.success) {
-        // A resposta vem como { data: [...], pagination: {...} }
-        const filesData = response.data?.data || response.data || [];
+        // A resposta pode vir como array direto ou como { data: [...], pagination: {...} }
+        const data = response.data as any;
+        const filesData = Array.isArray(data) ? data : (data?.data || []);
         setExamFiles(Array.isArray(filesData) ? filesData : []);
       }
     } catch (error) {
@@ -97,50 +100,40 @@ function ExamDetailContent() {
 
   const handleDownloadFile = async (mediaId: string, fileName: string) => {
     try {
+      setDownloadingFileId(mediaId);
       const downloadUrl = await apiClient.downloadExamMedia(mediaId);
       const token = apiClient.getToken();
       
-      // Para React Native, fazer fetch com token e depois tentar abrir
-      const response = await fetch(downloadUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token || ''}`,
-        },
-      });
-
-      if (!response.ok) {
-        // Se falhar, tentar abrir diretamente (pode funcionar se o token estiver no cookie ou header)
-        const supported = await Linking.canOpenURL(downloadUrl);
-        if (supported) {
-          await Linking.openURL(downloadUrl);
-        } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+      if (!token) {
+        Alert.alert('Sessão expirada', 'Faça login novamente para baixar o arquivo.');
         return;
       }
 
-      // Se a resposta for OK, tentar abrir a URL diretamente
-      // O backend vai servir o arquivo com os headers corretos
-      const supported = await Linking.canOpenURL(downloadUrl);
-      if (supported) {
-        await Linking.openURL(downloadUrl);
+      // Sanitizar o nome do arquivo para evitar problemas com caracteres especiais
+      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const downloadUri = `${FileSystem.cacheDirectory || FileSystem.documentDirectory}${safeFileName}`;
+
+      // Fazer download do arquivo com o token de autenticação
+      const downloadResult = await FileSystem.downloadAsync(downloadUrl, downloadUri, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (downloadResult.status !== 200) {
+        throw new Error(`Falha no download. Status ${downloadResult.status}`);
+      }
+
+      // Tentar compartilhar/abrir o arquivo baixado
+      const isSharingAvailable = await Sharing.isAvailableAsync();
+      if (isSharingAvailable) {
+        await Sharing.shareAsync(downloadResult.uri);
       } else {
-        Alert.alert('Erro', 'Não é possível abrir este arquivo.');
+        Alert.alert('Download concluído', `Arquivo salvo em ${downloadResult.uri}`);
       }
     } catch (error: any) {
       console.error('Error downloading file:', error);
-      // Se falhar, tentar abrir a URL diretamente como fallback
-      try {
-        const downloadUrl = await apiClient.downloadExamMedia(mediaId);
-        const supported = await Linking.canOpenURL(downloadUrl);
-        if (supported) {
-          await Linking.openURL(downloadUrl);
-        } else {
-          Alert.alert('Erro', 'Não foi possível baixar o arquivo. Verifique sua conexão e tente novamente.');
-        }
-      } catch (retryError) {
-        Alert.alert('Erro', 'Não foi possível baixar o arquivo. Verifique sua conexão e tente novamente.');
-      }
+      Alert.alert('Erro', 'Não foi possível baixar o arquivo. Verifique sua conexão e tente novamente.');
+    } finally {
+      setDownloadingFileId(null);
     }
   };
 
@@ -296,8 +289,9 @@ function ExamDetailContent() {
             examFiles.map((file) => (
               <TouchableOpacity
                 key={file.id}
-                style={styles.fileCard}
+                style={[styles.fileCard, downloadingFileId === file.id && styles.fileCardDownloading]}
                 onPress={() => handleDownloadFile(file.id, file.metadata?.originalName || 'arquivo')}
+                disabled={downloadingFileId === file.id}
               >
                 <View style={styles.fileIcon}>
                   <Ionicons
@@ -326,7 +320,11 @@ function ExamDetailContent() {
                     )}
                   </View>
                 </View>
-                <Ionicons name="download-outline" size={20} color={COLORS.primary} />
+                {downloadingFileId === file.id ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  <Ionicons name="download-outline" size={20} color={COLORS.primary} />
+                )}
               </TouchableOpacity>
             ))
           )}
@@ -603,6 +601,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     marginTop: 4,
+  },
+  fileCardDownloading: {
+    opacity: 0.6,
   },
   sectionHeader: {
     flexDirection: 'row',
