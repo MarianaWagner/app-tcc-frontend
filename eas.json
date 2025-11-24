@@ -17,6 +17,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "distribution": "internal",
       "env": {
         "EXPO_BASE_URL": "https://mycare-backend-ymt5.onrender.com"
       }
