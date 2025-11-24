@@ -1,5 +1,5 @@
-export const BASE_URL = process.env.BASE_URL || process.env.EXPO_BASE_URL || `http://192.168.1.8:5001`;
-export const API_BASE_URL = process.env.EXPO_API_BASE_URL || `${BASE_URL}/api`;
+export const BASE_URL = process.env.BASE_URL || process.env.EXPO_PUBLIC_BASE_URL || `http://192.168.1.8:5001`;
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || `${BASE_URL}/api`;
 
 export interface ApiResponse<T> {
   success: boolean;
