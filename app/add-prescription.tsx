@@ -4,16 +4,16 @@ import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { TermGuard } from '../components/TermGuard';
 import { COLORS } from '../constants/colors';
@@ -33,6 +33,33 @@ const STATUS_OPTIONS: { value: PrescriptionStatus; label: string }[] = [
   { value: 'concluida', label: 'Concluída' },
   { value: 'suspensa', label: 'Suspensa' },
 ];
+
+const guessMimeTypeFromName = (fileName: string): string | null => {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  switch (extension) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'png':
+      return 'image/png';
+    case 'pdf':
+      return 'application/pdf';
+    default:
+      return null;
+  }
+};
+
+const resolveMimeType = (rawMime: string | undefined, fileName: string): string => {
+  const normalizedRawMime = rawMime?.toLowerCase();
+  if (normalizedRawMime && normalizedRawMime.includes('/')) {
+    return normalizedRawMime;
+  }
+  const inferred = guessMimeTypeFromName(fileName);
+  if (inferred) {
+    return inferred;
+  }
+  return 'application/octet-stream';
+};
 
 function AddPrescriptionContent() {
   const router = useRouter();
@@ -89,7 +116,9 @@ function AddPrescriptionContent() {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        if (!isValidFileType(asset.mimeType || '', asset.name)) {
+        const fileName = asset.name || `document_${Date.now()}`;
+        const mimeType = resolveMimeType(asset.mimeType, fileName);
+        if (!isValidFileType(mimeType, fileName)) {
           Alert.alert(
             'Arquivo não suportado',
             'Apenas arquivos JPG, PNG ou PDF são permitidos.'
@@ -98,8 +127,8 @@ function AddPrescriptionContent() {
         }
         setAttachment({
           uri: asset.uri,
-          name: asset.name,
-          type: asset.mimeType || 'application/octet-stream',
+          name: fileName,
+          type: mimeType,
           size: asset.size,
         });
       }
@@ -126,7 +155,7 @@ function AddPrescriptionContent() {
       if (!result.canceled && result.assets.length > 0) {
         const asset = result.assets[0];
         const fileName = asset.fileName || `image_${Date.now()}.jpg`;
-        const mimeType = asset.type || 'image/jpeg';
+        const mimeType = resolveMimeType(asset.type, fileName);
         if (!isValidFileType(mimeType, fileName)) {
           Alert.alert(
             'Arquivo não suportado',
@@ -277,9 +306,9 @@ function AddPrescriptionContent() {
       }
 
       formData.append('attachment', {
-        uri: attachment.uri,
-        name: attachment.name,
-        type: attachment.type,
+        uri: attachment!.uri,
+        name: attachment!.name,
+        type: attachment!.type,
       } as any);
 
       const response = await apiClient.createPrescription(formData);

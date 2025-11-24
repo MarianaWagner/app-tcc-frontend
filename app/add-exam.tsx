@@ -34,25 +34,63 @@ function AddExamContent() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const isValidFileType = (mimeType: string, fileName: string): boolean => {
-    const lowerMimeType = mimeType.toLowerCase();
-    const lowerFileName = fileName.toLowerCase();
-    
-    // Aceitar apenas JPG, PNG e PDF
-    return (
-      lowerMimeType === 'image/jpeg' ||
-      lowerMimeType === 'image/jpg' ||
-      lowerMimeType === 'image/png' ||
-      lowerMimeType === 'application/pdf' ||
-      lowerFileName.endsWith('.jpg') ||
-      lowerFileName.endsWith('.jpeg') ||
-      lowerFileName.endsWith('.png') ||
-      lowerFileName.endsWith('.pdf')
-    );
-  };
+const guessMimeTypeFromName = (fileName: string): string | null => {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  switch (extension) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'png':
+      return 'image/png';
+    case 'pdf':
+      return 'application/pdf';
+    default:
+      return null;
+  }
+};
+
+const resolveMimeType = (rawMime: string | undefined, fileName: string): string => {
+  const normalizedRawMime = rawMime?.toLowerCase();
+  if (normalizedRawMime && normalizedRawMime.includes('/')) {
+    return normalizedRawMime;
+  }
+
+  const inferred = guessMimeTypeFromName(fileName);
+  if (inferred) {
+    return inferred;
+  }
+  // Default to jpeg to keep uploads working even if the picker does not expose mimeType.
+  return 'image/jpeg';
+};
+
+const isValidFileType = (mimeType: string, fileName: string): boolean => {
+  const normalizedMime = mimeType.toLowerCase();
+  const lowerFileName = fileName.toLowerCase();
+  
+  // Aceitar apenas JPG, PNG e PDF
+  return (
+    normalizedMime === 'image/jpeg' ||
+    normalizedMime === 'image/jpg' ||
+    normalizedMime === 'image/png' ||
+    normalizedMime === 'application/pdf' ||
+    lowerFileName.endsWith('.jpg') ||
+    lowerFileName.endsWith('.jpeg') ||
+    lowerFileName.endsWith('.png') ||
+    lowerFileName.endsWith('.pdf')
+  );
+};
 
   const handleSelectImages = async () => {
     try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permissão necessária',
+          'Precisamos de acesso à sua galeria para anexar imagens.'
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
@@ -65,7 +103,7 @@ function AddExamContent() {
 
         result.assets.forEach(asset => {
           const fileName = asset.fileName || `image_${Date.now()}.jpg`;
-          const mimeType = asset.type || 'image/jpeg';
+          const mimeType = resolveMimeType(asset.type, fileName);
           
           if (isValidFileType(mimeType, fileName)) {
             validFiles.push({
@@ -108,17 +146,18 @@ function AddExamContent() {
         const invalidFiles: string[] = [];
 
         result.assets.forEach(asset => {
-          const mimeType = asset.mimeType || 'application/octet-stream';
+          const fileName = asset.name || `document_${Date.now()}`;
+          const mimeType = resolveMimeType(asset.mimeType, fileName);
           
-          if (isValidFileType(mimeType, asset.name)) {
+          if (isValidFileType(mimeType, fileName)) {
             validFiles.push({
               uri: asset.uri,
-              name: asset.name,
+              name: fileName,
               type: mimeType,
               size: asset.size || 0,
             });
           } else {
-            invalidFiles.push(asset.name);
+            invalidFiles.push(fileName);
           }
         });
 
@@ -378,7 +417,7 @@ function AddExamContent() {
               <TouchableOpacity
                 style={styles.fileButton}
                 onPress={handleSelectImages}
-              >
+               >
                 <Ionicons name="image-outline" size={20} color={COLORS.primary} />
                 <Text style={styles.fileButtonText}>Imagens</Text>
               </TouchableOpacity>
