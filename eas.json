@@ -8,8 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_BASE_URL": "http://192.168.1.8:5001",
-        "EXPO_API_BASE_URL": "http://192.168.1.8:5001/api"
+        "EXPO_PUBLIC_BASE_URL": "http://192.168.1.8:5001",
+        "EXPO_PUBLIC_API_BASE_URL": "http://192.168.1.8:5001/api"
       }
     },
     "preview": {
@@ -19,8 +19,8 @@
       "autoIncrement": true,
       "distribution": "internal",
       "env": {
-        "EXPO_BASE_URL": "https://mycare-backend-ymt5.onrender.com",
-        "BASE_URL": "https://mycare-backend-ymt5.onrender.com"
+        "EXPO_PUBLIC_BASE_URL": "https://mycare-backend-ymt5.onrender.com",
+        "EXPO_PUBLIC_API_BASE_URL": "https://mycare-backend-ymt5.onrender.com/api"
       }
     },
     "ios-simulator": {
